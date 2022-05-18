@@ -1,10 +1,12 @@
 package chcm.mid.his2cris.gather.commit;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.CloudWatchLogsEvent;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -12,13 +14,34 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.zip.GZIPInputStream;
 
 public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, String> {
 
     @Override
     public String handleRequest(CloudWatchLogsEvent event, Context context) {
-        String awsLogs = event.toString();
-    	context.getLogger().log("Input: " + awsLogs);        
+    	LambdaLogger logger = context.getLogger();
+    	context.getLogger().log(event.toString());
+    	String awsLogs = event.getAwsLogs().getData();
+        Decoder decoder = Base64.getDecoder();
+		byte[] decodedEvent = decoder.decode(awsLogs);
+        StringBuilder output = new StringBuilder();
+        try {
+            GZIPInputStream inputStream = new GZIPInputStream(new ByteArrayInputStream(decodedEvent));
+            InputStreamReader inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            bufferedReader.lines().forEach( line -> {
+              logger.log(line);
+              output.append(line);
+            });
+        } catch(IOException e) {
+        	context.getLogger().log("ERROR: " + e.toString());
+            logger.log("ERROR: " + e.toString());
+        }   	
+    	
     	StringBuffer sb = new StringBuffer("");
 		context.getLogger().log("開始連線至AP_EC2......");
 		try {

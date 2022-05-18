@@ -24,7 +24,7 @@ import org.json.JSONObject;
 
 public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, String> {
 
-	private static final String USELESS_COMMIT = "\\t802560 Query\\tCOMMIT";
+	private static final String USELESS_COMMIT = "802560 Query";
 	private boolean need2EC2 = true;
 	
     @Override

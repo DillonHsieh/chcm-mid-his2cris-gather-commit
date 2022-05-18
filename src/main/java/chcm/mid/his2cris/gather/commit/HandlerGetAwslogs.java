@@ -19,8 +19,14 @@ import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.zip.GZIPInputStream;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, String> {
 
+	private static final String USELESS_COMMIT = "\\t802560 Query\\tCOMMIT";
+	private boolean need2EC2 = true;
+	
     @Override
     public String handleRequest(CloudWatchLogsEvent event, Context context) {
     	LambdaLogger logger = context.getLogger();
@@ -37,11 +43,30 @@ public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, St
               logger.log(line);
               output.append(line);
             });
+            
+            JSONObject obj = new JSONObject(output.toString());
+            JSONArray arr = obj.getJSONArray("logEvents");
+            for (int i = 0; i < arr.length(); ++i) {
+	        	  JSONObject arrObj = arr.getJSONObject(i);
+	        	  String message = arrObj.getString("message");
+	        	  if(message.contains(USELESS_COMMIT)) {
+	        		  need2EC2 = false;
+	        		  break;
+	        	  }
+            }
         } catch(IOException e) {
         	context.getLogger().log("ERROR: " + e.toString());
             logger.log("ERROR: " + e.toString());
         }   	
+    	if(need2EC2) {
+    		passAWSlog2EC2(context, awsLogs);
+    	}else
+    		context.getLogger().log("排除....." + USELESS_COMMIT);
     	
+        return "";
+    }
+
+    private void passAWSlog2EC2(Context context, String awsLogs) {
     	StringBuffer sb = new StringBuffer("");
 		context.getLogger().log("開始連線至AP_EC2......");
 		try {
@@ -80,8 +105,5 @@ public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, St
 			e.printStackTrace();
 			context.getLogger().log("Caught IOException exception: " + e.getMessage());
 		}
-
-        return "";
     }
-
 }

@@ -35,6 +35,7 @@ public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, St
         Decoder decoder = Base64.getDecoder();
 		byte[] decodedEvent = decoder.decode(awsLogs);
         StringBuilder output = new StringBuilder();
+        
         try {
             GZIPInputStream inputStream = new GZIPInputStream(new ByteArrayInputStream(decodedEvent));
             InputStreamReader inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
@@ -44,16 +45,16 @@ public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, St
               output.append(line);
             });
             
-            JSONObject obj = new JSONObject(output.toString());
-            JSONArray arr = obj.getJSONArray("logEvents");
-            for (int i = 0; i < arr.length(); ++i) {
-	        	  JSONObject arrObj = arr.getJSONObject(i);
-	        	  String message = arrObj.getString("message");
-	        	  if(message.contains(USELESS_COMMIT)) {
-	        		  need2EC2 = false;
-	        		  break;
-	        	  }
-            }
+//            JSONObject obj = new JSONObject(output.toString());
+//            JSONArray arr = obj.getJSONArray("logEvents");
+//            for (int i = 0; i < arr.length(); ++i) {
+//	        	  JSONObject arrObj = arr.getJSONObject(i);
+//	        	  String message = arrObj.getString("message");
+//	        	  if(message.contains(USELESS_COMMIT)) {
+//	        		  need2EC2 = false;
+//	        		  break;
+//	        	  }
+//            }
         } catch(IOException e) {
         	context.getLogger().log("ERROR: " + e.toString());
             logger.log("ERROR: " + e.toString());
@@ -62,7 +63,7 @@ public class HandlerGetAwslogs implements RequestHandler<CloudWatchLogsEvent, St
     		passAWSlog2EC2(context, awsLogs);
     	}else
     		context.getLogger().log("排除....." + USELESS_COMMIT);
-    	
+
         return "";
     }
 
